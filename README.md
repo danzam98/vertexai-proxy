@@ -58,7 +58,7 @@ gcloud config set project YOUR_PROJECT_ID
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/vertexai-proxy.git
+git clone https://github.com/danzam98/vertexai-proxy.git
 cd vertexai-proxy
 ```
 
@@ -301,8 +301,8 @@ MIT License - see LICENSE file for details
 
 ## Support
 
-- **Issues**: https://github.com/YOUR_USERNAME/vertexai-proxy/issues
-- **Discussions**: https://github.com/YOUR_USERNAME/vertexai-proxy/discussions
+- **Issues**: https://github.com/danzam98/vertexai-proxy/issues
+- **Discussions**: https://github.com/danzam98/vertexai-proxy/discussions
 
 ---
 
