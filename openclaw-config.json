@@ -19,7 +19,7 @@
             },
             "contextWindow": 1048576,
             "input": ["text"],
-            "maxTokens": 8192
+            "maxTokens": 65536
           },
           {
             "id": "google/gemini-2.5-flash-medium",
@@ -33,7 +33,7 @@
             },
             "contextWindow": 1048576,
             "input": ["text"],
-            "maxTokens": 8192
+            "maxTokens": 65536
           },
           {
             "id": "google/gemini-2.5-flash-high",
@@ -47,7 +47,7 @@
             },
             "contextWindow": 1048576,
             "input": ["text"],
-            "maxTokens": 8192
+            "maxTokens": 65536
           }
         ]
       }
