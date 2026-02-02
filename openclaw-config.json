@@ -1,0 +1,71 @@
+{
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "vertexai-proxy": {
+        "baseUrl": "http://127.0.0.1:8000/v1",
+        "apiKey": "dummy-key-not-used",
+        "api": "openai-completions",
+        "models": [
+          {
+            "id": "google/gemini-2.5-flash-low",
+            "name": "Gemini 2.5 Flash (Low Thinking)",
+            "reasoning": true,
+            "cost": {
+              "input": 1e-7,
+              "output": 4e-7,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 1048576,
+            "input": ["text"],
+            "maxTokens": 8192
+          },
+          {
+            "id": "google/gemini-2.5-flash-medium",
+            "name": "Gemini 2.5 Flash (Medium Thinking)",
+            "reasoning": true,
+            "cost": {
+              "input": 1e-7,
+              "output": 4e-7,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 1048576,
+            "input": ["text"],
+            "maxTokens": 8192
+          },
+          {
+            "id": "google/gemini-2.5-flash-high",
+            "name": "Gemini 2.5 Flash (High Thinking)",
+            "reasoning": true,
+            "cost": {
+              "input": 1e-7,
+              "output": 4e-7,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 1048576,
+            "input": ["text"],
+            "maxTokens": 8192
+          }
+        ]
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "vertexai-proxy/google/gemini-2.5-flash-medium"
+      },
+      "heartbeat": {
+        "model": "vertexai-proxy/google/gemini-2.5-flash-low"
+      },
+      "subagents": {
+        "model": "vertexai-proxy/google/gemini-2.5-flash-high",
+        "maxConcurrent": 8
+      },
+      "maxConcurrent": 4
+    }
+  }
+}
