@@ -27,6 +27,7 @@ PROXY_HOST = os.getenv("PROXY_HOST", "127.0.0.1")
 PROXY_PORT = int(os.getenv("PROXY_PORT", "8000"))
 
 # Model routing: suffix -> reasoning_effort mapping
+# Maps to thinking budgets: low=1K, medium=8K, high=24K
 REASONING_LEVELS = {
     "low": "low",
     "medium": "medium",
@@ -50,7 +51,7 @@ def get_vertex_token() -> str:
 
 def parse_model_id(model_id: str) -> tuple[str, str]:
     """
-    Parse model ID to extract base model and reasoning level.
+    Parse model ID to extract base model and reasoning effort.
 
     Examples:
         google/gemini-2.5-flash-low -> (google/gemini-2.5-flash, low)
@@ -58,10 +59,10 @@ def parse_model_id(model_id: str) -> tuple[str, str]:
         google/gemini-2.5-flash-high -> (google/gemini-2.5-flash, high)
         google/gemini-2.5-flash -> (google/gemini-2.5-flash, medium) [default]
     """
-    for suffix, level in REASONING_LEVELS.items():
+    for suffix, effort in REASONING_LEVELS.items():
         if model_id.endswith(f"-{suffix}"):
             base_model = model_id.rsplit(f"-{suffix}", 1)[0]
-            return base_model, level
+            return base_model, effort
 
     # Default to medium if no suffix
     return model_id, "medium"
@@ -79,7 +80,7 @@ async def chat_completions(request: Request):
 
         # Extract and parse model ID
         model_id = body.get("model", "")
-        base_model, reasoning_level = parse_model_id(model_id)
+        base_model, reasoning_effort = parse_model_id(model_id)
 
         # Get fresh token
         token = get_vertex_token()
@@ -87,7 +88,10 @@ async def chat_completions(request: Request):
         # Modify request body
         vertex_body = body.copy()
         vertex_body["model"] = base_model
-        vertex_body["reasoning_effort"] = reasoning_level
+        vertex_body["reasoning_effort"] = reasoning_effort
+
+        # Log the request for debugging
+        print(f"[PROXY] Model ID: {model_id} → Base: {base_model}, Reasoning: {reasoning_effort}")
 
         # Forward to Vertex AI
         headers = {
