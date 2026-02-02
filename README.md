@@ -119,21 +119,21 @@ Edit `~/.openclaw/openclaw.json`:
             "name": "Gemini 2.5 Flash (Low)",
             "reasoning": true,
             "contextWindow": 1048576,
-            "maxTokens": 8192
+            "maxTokens": 65536
           },
           {
             "id": "google/gemini-2.5-flash-medium",
             "name": "Gemini 2.5 Flash (Medium)",
             "reasoning": true,
             "contextWindow": 1048576,
-            "maxTokens": 8192
+            "maxTokens": 65536
           },
           {
             "id": "google/gemini-2.5-flash-high",
             "name": "Gemini 2.5 Flash (High)",
             "reasoning": true,
             "contextWindow": 1048576,
-            "maxTokens": 8192
+            "maxTokens": 65536
           }
         ]
       }
