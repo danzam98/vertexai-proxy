@@ -38,11 +38,16 @@ REASONING_LEVELS = {
 def get_vertex_token() -> str:
     """Get fresh Vertex AI access token using gcloud."""
     try:
+        # Clear GOOGLE_APPLICATION_CREDENTIALS to use default ADC
+        env = os.environ.copy()
+        env.pop('GOOGLE_APPLICATION_CREDENTIALS', None)
+
         result = subprocess.run(
             ["gcloud", "auth", "application-default", "print-access-token"],
             capture_output=True,
             text=True,
-            check=True
+            check=True,
+            env=env
         )
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
@@ -106,9 +111,27 @@ async def chat_completions(request: Request):
                 headers=headers
             )
 
+            # Get response content
+            response_content = vertex_response.json()
+
+            # Log detailed response for debugging unexpected_tool_call errors
+            if "choices" in response_content and len(response_content["choices"]) > 0:
+                choice = response_content["choices"][0]
+                finish_reason = choice.get("finish_reason", "unknown")
+                message = choice.get("message", {})
+
+                print(f"[RESPONSE] Finish reason: {finish_reason}")
+
+                # Log tool calls if present
+                if "tool_calls" in message and message["tool_calls"]:
+                    print(f"[RESPONSE] Tool calls: {len(message['tool_calls'])}")
+                    for idx, tc in enumerate(message["tool_calls"]):
+                        fn_name = tc.get("function", {}).get("name", "unknown")
+                        print(f"[RESPONSE]   Tool #{idx}: {fn_name}")
+
             # Return response
             return JSONResponse(
-                content=vertex_response.json(),
+                content=response_content,
                 status_code=vertex_response.status_code
             )
 
