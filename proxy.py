@@ -95,6 +95,28 @@ async def chat_completions(request: Request):
         vertex_body["model"] = base_model
         vertex_body["reasoning_effort"] = reasoning_effort
 
+        # Log all unique roles before transformation
+        if "messages" in vertex_body:
+            roles_found = set(msg.get("role") for msg in vertex_body["messages"] if "role" in msg)
+            print(f"[DEBUG] Roles in request: {sorted(roles_found)}")
+
+        # Transform unsupported roles for Vertex AI compatibility
+        # Vertex AI only supports: system, user, assistant
+        if "messages" in vertex_body:
+            for msg in vertex_body["messages"]:
+                role = msg.get("role")
+                if role == "developer":
+                    # OpenAI's developer role (for reasoning models) → system
+                    msg["role"] = "system"
+                    print(f"[TRANSFORM] developer → system")
+                elif role == "tool":
+                    # Tool results - keep as-is, test if Vertex AI supports it
+                    pass
+                elif role not in ["system", "user", "assistant", "tool"]:
+                    # Any other custom role → system
+                    print(f"[TRANSFORM] {role} → system")
+                    msg["role"] = "system"
+
         # Log the request for debugging
         print(f"[PROXY] Model ID: {model_id} → Base: {base_model}, Reasoning: {reasoning_effort}")
 
@@ -113,6 +135,11 @@ async def chat_completions(request: Request):
 
             # Get response content
             response_content = vertex_response.json()
+
+            # Log errors for debugging
+            if vertex_response.status_code >= 400:
+                print(f"[ERROR] Vertex AI returned {vertex_response.status_code}")
+                print(f"[ERROR] Response: {response_content}")
 
             # Log detailed response for debugging unexpected_tool_call errors
             if "choices" in response_content and len(response_content["choices"]) > 0:
