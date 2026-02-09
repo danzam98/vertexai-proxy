@@ -9,7 +9,7 @@ import json
 import subprocess
 from typing import Dict, Any
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse, Response
 import httpx
 import uvicorn
 from dotenv import load_dotenv
@@ -126,43 +126,82 @@ async def chat_completions(request: Request):
             "Content-Type": "application/json"
         }
 
-        async with httpx.AsyncClient(timeout=300.0) as client:
+        # Create a persistent client for streaming
+        client = httpx.AsyncClient(timeout=300.0)
+
+        # Check if request wants streaming
+        is_streaming_request = vertex_body.get("stream", False)
+
+        if is_streaming_request:
+            # Use streaming request for SSE responses
+            print(f"[DEBUG] Making streaming request to Vertex AI")
+
+            async def stream_generator():
+                async with client.stream(
+                    "POST",
+                    f"{VERTEX_AI_BASE_URL}/chat/completions",
+                    json=vertex_body,
+                    headers=headers
+                ) as vertex_response:
+                    print(f"[DEBUG] Vertex AI status: {vertex_response.status_code}")
+                    print(f"[DEBUG] Content-Type: {vertex_response.headers.get('content-type', '')}")
+
+                    async for chunk in vertex_response.aiter_bytes(chunk_size=1024):
+                        yield chunk
+
+                await client.aclose()
+
+            return StreamingResponse(
+                stream_generator(),
+                media_type="text/event-stream"
+            )
+        else:
+            # Non-streaming request
             vertex_response = await client.post(
                 f"{VERTEX_AI_BASE_URL}/chat/completions",
                 json=vertex_body,
                 headers=headers
             )
+            await client.aclose()
 
-            # Get response content
-            response_content = vertex_response.json()
+            # Log response status
+            print(f"[DEBUG] Vertex AI status: {vertex_response.status_code}")
 
-            # Log errors for debugging
+            # Handle errors and parse JSON
             if vertex_response.status_code >= 400:
                 print(f"[ERROR] Vertex AI returned {vertex_response.status_code}")
-                print(f"[ERROR] Response: {response_content}")
+                print(f"[ERROR] Response: {vertex_response.text}")
 
-            # Log detailed response for debugging unexpected_tool_call errors
-            if "choices" in response_content and len(response_content["choices"]) > 0:
-                choice = response_content["choices"][0]
-                finish_reason = choice.get("finish_reason", "unknown")
-                message = choice.get("message", {})
+            try:
+                response_content = vertex_response.json()
 
-                print(f"[RESPONSE] Finish reason: {finish_reason}")
+                # Log detailed response for debugging (preserve existing logging)
+                if "choices" in response_content and len(response_content["choices"]) > 0:
+                    choice = response_content["choices"][0]
+                    finish_reason = choice.get("finish_reason", "unknown")
+                    message = choice.get("message", {})
+                    print(f"[RESPONSE] Finish reason: {finish_reason}")
+                    if "tool_calls" in message and message["tool_calls"]:
+                        print(f"[RESPONSE] Tool calls: {len(message['tool_calls'])}")
+                        for idx, tc in enumerate(message["tool_calls"]):
+                            fn_name = tc.get("function", {}).get("name", "unknown")
+                            print(f"[RESPONSE]   Tool #{idx}: {fn_name}")
 
-                # Log tool calls if present
-                if "tool_calls" in message and message["tool_calls"]:
-                    print(f"[RESPONSE] Tool calls: {len(message['tool_calls'])}")
-                    for idx, tc in enumerate(message["tool_calls"]):
-                        fn_name = tc.get("function", {}).get("name", "unknown")
-                        print(f"[RESPONSE]   Tool #{idx}: {fn_name}")
-
-            # Return response
-            return JSONResponse(
-                content=response_content,
-                status_code=vertex_response.status_code
-            )
+                return JSONResponse(
+                    content=response_content,
+                    status_code=vertex_response.status_code
+                )
+            except Exception as json_error:
+                print(f"[ERROR] Failed to parse JSON: {json_error}")
+                return Response(
+                    content=vertex_response.content,
+                    status_code=vertex_response.status_code,
+                    headers=dict(vertex_response.headers)
+                )
 
     except Exception as e:
+        import traceback
+        print(f"[EXCEPTION] {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
